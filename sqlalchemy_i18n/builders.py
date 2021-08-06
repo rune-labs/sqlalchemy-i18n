@@ -105,10 +105,13 @@ class RelationshipBuilder(object):
     @property
     def primary_key_conditions(self):
         conditions = []
+
+        target_key = f'{self.parent_cls.__name__.lower()}_id'
+
         for key in get_primary_keys(self.parent_cls).keys():
             conditions.append(
                 getattr(self.parent_cls, key) ==
-                getattr(self.translation_cls, key)
+                getattr(self.translation_cls, target_key)
             )
         return conditions
 
@@ -121,12 +124,11 @@ class RelationshipBuilder(object):
 
             conditions = self.primary_key_conditions
             conditions.append(self.translation_cls.locale == locale)
+
+
             mapper.add_property(key, sa.orm.relationship(
                 self.translation_cls,
                 primaryjoin=sa.and_(*conditions),
-                foreign_keys=list(
-                    get_primary_keys(self.parent_cls).values()
-                ),
                 uselist=False,
                 viewonly=True
             ))
@@ -189,10 +191,7 @@ class RelationshipBuilder(object):
             ))
 
     def get_translations_relationship_args(self):
-        foreign_keys = [
-            getattr(self.translation_cls, column_key)
-            for column_key in get_primary_keys(self.parent_cls).keys()
-        ]
+        foreign_keys = [self.translation_cls.item_id]
 
         relationship_args = copy(
             self.manager.option(

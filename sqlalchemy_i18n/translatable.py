@@ -86,9 +86,15 @@ class TranslationsMapping(object):
         ):
             return self.obj._translations.get(locale)
 
-        return session.query(self.obj.__translatable__['class']).get(
-            sa.inspect(self.obj).identity + (locale, )
-        )
+        t_cls = self.obj.__translatable__['class']
+        target_id = f'{self.obj.__class__.__name__.lower()}_id'
+
+        return session.query(t_cls).filter(
+            sa.and_(
+                getattr(t_cls, target_id)  == self.obj.id,
+                t_cls.locale == locale
+            )
+        ).first()
 
     def __getitem__(self, locale):
         if locale in self:
