@@ -3,7 +3,7 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm.util import has_identity
 
 from .exc import UnknownLocaleError
-from .utils import get_current_locale, get_fallback_locale
+from .utils import get_current_locale, get_fallback_locale, get_single_pk
 
 
 class Translatable(object):
@@ -47,7 +47,7 @@ class Translatable(object):
     @hybrid_property
     def translations(self):
         if not hasattr(self, '_translations_mapping'):
-            self._translations_mapping = TranslationsMapping(self)
+            self._translations_mapping = RuneTranslationsMapping(self)
         return self._translations_mapping
 
     @translations.setter
@@ -145,3 +145,24 @@ class TranslationsMapping(object):
     def __iter__(self):
         for locale in self.manager.option(self.obj, 'locales'):
             yield locale, self[locale]
+
+class RuneTranslationsMapping(TranslationsMapping):
+    def fetch(self, locale):
+        session = sa.orm.object_session(self.obj)
+        # If the object has no identity and its not in session or if the object
+        # has _translations relationship loaded get the locale object from the
+        # relationship.
+        if '_translations' not in sa.inspect(self.obj).unloaded or (
+            not session or not has_identity(self.obj)
+        ):
+            return self.obj._translations.get(locale)
+
+        translated = self.obj.__translatable__['class']
+        id_attr = getattr(translated, translated.id_key())
+        locale_attr = getattr(translated, translated.locale_key())
+        
+
+        return session.query(self.obj.__translatable__['class']).filter(
+            id_attr == get_single_pk(self.obj),
+            locale_attr == locale
+        ).first()

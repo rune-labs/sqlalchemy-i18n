@@ -31,12 +31,25 @@ def translation_base(
         __abstract__ = True
         __parent_class__ = parent_cls
 
+        __config__ = {
+            'id_column': 'id',
+            'locale_column': 'locale'
+        }
+
+        @classmethod
+        def id_key(cls):
+            return cls.__config__['id_column']
+
+        @classmethod
+        def locale_key(cls):
+            return cls.__config__['locale_column']
+
         @declared_attr
         def __table_args__(cls):
             if has_inherited_table(cls):
                 return tuple()
             else:
-                names = list(get_primary_keys(parent_cls).keys())
+                names = [cls.id_key()]
 
                 return (
                     sa.schema.ForeignKeyConstraint(

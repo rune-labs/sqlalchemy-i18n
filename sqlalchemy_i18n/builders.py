@@ -108,7 +108,7 @@ class RelationshipBuilder(object):
         for key in get_primary_keys(self.parent_cls).keys():
             conditions.append(
                 getattr(self.parent_cls, key) ==
-                getattr(self.translation_cls, key)
+                getattr(self.translation_cls, self.translation_cls.id_key())
             )
         return conditions
 
