@@ -8,6 +8,8 @@ Several configuration options exists for SQLAlchemy-i18n. Each of these options 
 Dynamic source locale
 ---------------------
 
+Rune Note: This doesn't exist in the codebase as far as I can see (LG - 2021-08-11)
+
 Sometimes you may want to have dynamic source (default) locale. This can be achieved by setting `dynamic_source_locale` as `True`.
 
 
@@ -60,11 +62,11 @@ Other options
 -------------
 
 
-* locales
+* locales - List<String>
 
     Defines the list of locales that given model or manager supports
 
-* auto_create_locales
+* auto_create_locales - Boolean
 
     Whether or not to auto-create all locales whenever some of the locales is created. By default this option is True. It is highly recommended to leave this as True, since not creating all locales at once can lead to problems in multithreading environments.
 
@@ -72,11 +74,25 @@ Other options
 
     After this two users edit the finnish translation of this article at the same time. The application tries to create finnish translation twice resulting in database integrity errors.
 
-* fallback_locale
+* fallback_locale - Boolean
 
     The locale which will be used as a fallback for translation hybrid properties that return None or empty string.
 
-* translations_relationship_args
+* exclude_hybrid_properties - List<String>
+
+    If a field is listed here, its translated value will not be directly accessible from the primary model. For two models:
+    
+    ```
+    class Item(db.Model, Translatable):
+        name = db.Column(db.String())
+
+    class ItemTranslation(translation_base(Item, config=translation_config)):
+        name = db.Column(db.String())
+    ```
+    If `exclude_hybrid_properties: []`, then a user can call `Item.query.first().name` and receive the translated name.
+    If `exclude_hybrid_properties: ['name']`, then when a user can calls `Item.query.first().name` they will receive Item.name. To receive ItemTranslation.name, they will need to call `tem.query.first().current_translation.name`.
+
+* translations_relationship_args - dict
 
     Dictionary of arguments passed as defaults for automatically created translations relationship.::
 

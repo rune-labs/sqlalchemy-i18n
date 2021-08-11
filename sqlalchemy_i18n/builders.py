@@ -8,7 +8,7 @@ from sqlalchemy_utils.functions import get_primary_keys
 from .comparators import TranslationComparator
 from .exc import ImproperlyConfigured
 from .expressions import current_locale
-from .utils import get_fallback_locale, option
+from .utils import get_fallback_locale, get_pk_column, option
 
 
 class HybridPropertyBuilder(object):
@@ -190,7 +190,7 @@ class RelationshipBuilder(object):
 
     def get_translations_relationship_args(self):
         foreign_keys = [
-            getattr(self.translation_cls, column_key)
+            getattr(self.translation_cls, self.translation_cls.id_key())
             for column_key in get_primary_keys(self.parent_cls).keys()
         ]
 

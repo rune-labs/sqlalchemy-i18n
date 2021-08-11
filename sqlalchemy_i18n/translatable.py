@@ -1,3 +1,4 @@
+from babel.core import default_locale
 import sqlalchemy as sa
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm.util import has_identity
@@ -101,7 +102,7 @@ class TranslationsMapping(object):
                 translation_parent=self.obj,
                 locale=locale
             )
-            self.obj._translations[locale] = locale_obj
+            # self.obj._translations[locale] = locale_obj
             return locale_obj
         raise UnknownLocaleError(locale, self.obj)
 
@@ -146,7 +147,11 @@ class TranslationsMapping(object):
         for locale in self.manager.option(self.obj, 'locales'):
             yield locale, self[locale]
 
+
 class RuneTranslationsMapping(TranslationsMapping):
+    def __contains__(self, locale):
+        return locale in self.manager.option(self.obj, 'locales') or locale in self.manager.option(self.obj, 'fallback_locale')
+
     def fetch(self, locale):
         session = sa.orm.object_session(self.obj)
         # If the object has no identity and its not in session or if the object
@@ -160,9 +165,29 @@ class RuneTranslationsMapping(TranslationsMapping):
         translated = self.obj.__translatable__['class']
         id_attr = getattr(translated, translated.id_key())
         locale_attr = getattr(translated, translated.locale_key())
-        
 
         return session.query(self.obj.__translatable__['class']).filter(
             id_attr == get_single_pk(self.obj),
             locale_attr == locale
         ).first()
+
+    def __getitem__(self, locale):
+        if locale == self.manager.option(self.obj, 'fallback_locale'):
+            return self.default_translation
+        return super().__getitem__(locale)
+
+    def __setitem__(self, locale, translation_obj):
+        if locale == self.manager.option(self.obj, 'fallback_locale'):
+            raise Exception("fallback locale should be set on primary object")
+        return super().__setitem__(locale, translation_obj)
+
+    @property
+    def default_translation(self):
+        # class_ = self.obj.__translatable__['class']
+        # locale_obj = class_(
+        #     translation_parent=self.obj,
+        #     locale='en',
+        #     name='original'
+        # )
+        # return locale_obj
+        return self.obj

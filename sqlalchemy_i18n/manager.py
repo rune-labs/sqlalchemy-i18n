@@ -5,7 +5,7 @@ from sqlalchemy.ext.declarative import declared_attr, has_inherited_table
 from sqlalchemy_utils.functions import get_declarative_base, get_primary_keys
 
 from .builders import HybridPropertyBuilder, RelationshipBuilder
-from .utils import all_translated_columns, is_string
+from .utils import all_translated_columns, is_string, get_pk_column
 
 
 class BaseTranslationMixin(object):
@@ -15,7 +15,8 @@ class BaseTranslationMixin(object):
 def translation_base(
     parent_cls,
     base_class_factory=None,
-    foreign_key_args=None
+    foreign_key_args=None,
+    config={}
 ):
     if base_class_factory is None:
         base_class_factory = get_declarative_base
@@ -49,31 +50,38 @@ def translation_base(
             if has_inherited_table(cls):
                 return tuple()
             else:
+                # TODO: could make both of these support lists
                 names = [cls.id_key()]
+                pk_name = get_pk_column(parent_cls)
 
                 return (
                     sa.schema.ForeignKeyConstraint(
                         names,
                         [
-                            '%s.%s' % (parent_cls.__tablename__, name)
-                            for name in names
+                            '%s.%s' % (parent_cls.__tablename__, pk_name)
                         ],
                         **foreign_key_args
                     ),
                 )
 
+    setattr(TranslationMixin, '__config__', {
+            **TranslationMixin.__config__, **config})
+
     for column in parent_cls.__table__.c:
         if column.primary_key:
             column_copy = column._copy()
             column_copy.autoincrement = False
+            column_copy.primary_key = False
+            column_copy.name = TranslationMixin.id_key()
+            column_copy.key = TranslationMixin.id_key()
             setattr(
                 TranslationMixin,
-                column.key,
+                TranslationMixin.id_key(),
                 column_copy
             )
 
     TranslationMixin.locale = sa.Column(
-        sa.String(10), primary_key=True
+        sa.String()
     )
 
     return TranslationMixin

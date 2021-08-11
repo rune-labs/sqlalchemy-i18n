@@ -20,11 +20,17 @@ def get_fallback_locale(obj):
         locale = locale(obj)
     return locale
 
+
 def get_single_pk(obj):
     pk = sa.inspect(obj).identity
     if len(pk) > 1:
         raise Exception("there should only be one pk on translated classes")
     return pk[0]
+
+
+def get_pk_column(cls):
+    return cls.__table__.primary_key.columns[0].name
+
 
 def option(obj_or_class, option):
     class_ = obj_or_class if isclass(obj_or_class) else obj_or_class.__class__
